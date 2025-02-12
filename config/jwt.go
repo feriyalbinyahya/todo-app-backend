@@ -1,3 +1,5 @@
 package config
 
-var JwtKey = []byte("secret-key") // Ganti dengan key yang lebih aman
+import "os"
+
+var JwtKey = []byte(os.Getenv("JWT_SECRET"))
