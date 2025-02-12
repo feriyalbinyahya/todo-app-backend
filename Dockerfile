@@ -1,4 +1,4 @@
-# Gunakan base image Go terbaru yang didukung
+# Stage 1: Build aplikasi dengan Go
 FROM golang:1.23.6 AS builder
 
 # Set working directory dalam container
@@ -13,11 +13,14 @@ RUN go mod tidy
 # Build aplikasi
 RUN go build -o todo-app-backend
 
-# Image yang lebih kecil untuk menjalankan aplikasi
-FROM debian:bullseye-slim
+# Stage 2: Gunakan Alpine dengan glibc
+FROM frolvlad/alpine-glibc
 
 # Set working directory
 WORKDIR /root/
+
+# Install dependencies yang diperlukan
+RUN apk --no-cache add ca-certificates
 
 # Copy binary dari stage builder
 COPY --from=builder /app/todo-app-backend .
