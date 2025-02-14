@@ -2,14 +2,19 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"todo-app/controllers"
 	"todo-app/database"
 	"todo-app/middleware"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal("Error loading .env file")
+	}
 
 	// Init database
 	database.ConnectDatabase()

@@ -170,7 +170,7 @@ func UpdateTask(c *gin.Context) {
 		return
 	}
 
-	// Perbarui field Title, Description, dan Deadline
+	// **Perbarui Title, Description, dan Deadline**
 	task.Title = updatedTask.Title
 	task.Description = updatedTask.Description
 	task.Deadline = updatedTask.Deadline
@@ -178,7 +178,7 @@ func UpdateTask(c *gin.Context) {
 	// **Mengelola SubTasks**
 	var newSubTaskIDs = make(map[uint]bool)
 	for _, subTask := range updatedTask.SubTasks {
-		if subTask.TaskID == 0 { // TaskID harus diisi dengan ID task ini
+		if subTask.TaskID == 0 {
 			subTask.TaskID = task.ID
 		}
 		newSubTaskIDs[subTask.ID] = true
@@ -186,40 +186,59 @@ func UpdateTask(c *gin.Context) {
 
 	var updatedSubTasks []models.SubTask
 	for _, subTask := range task.SubTasks {
-		if newSubTaskIDs[subTask.ID] { // Subtask masih ada di data baru
+		if newSubTaskIDs[subTask.ID] {
 			updatedSubTasks = append(updatedSubTasks, subTask)
 		} else {
-			// Hapus SubTask yang tidak ada di request
+			// **Hapus SubTask yang tidak ada di request**
 			database.DB.Delete(&subTask)
 		}
 	}
 
-	// Tambahkan SubTasks baru yang belum ada
+	// **Tambahkan SubTasks baru yang belum ada**
 	for _, subTask := range updatedTask.SubTasks {
 		if subTask.ID == 0 {
 			updatedSubTasks = append(updatedSubTasks, subTask)
 		}
 	}
 
-	// Simpan perubahan SubTasks
+	// **Periksa Jika Ada Subtask Baru → Completed Harus False**
+	if len(updatedSubTasks) > len(task.SubTasks) {
+		task.Completed = false
+	}
+
+	// **Simpan perubahan SubTasks**
 	task.SubTasks = updatedSubTasks
 	database.DB.Save(&task)
 
-	// **Hitung Progress Secara Otomatis**
+	// ✅ **Hitung Progress Secara Otomatis**
 	var progress float64
-	if len(task.SubTasks) > 0 {
-		completedSubTasks := 0
-		for _, subTask := range task.SubTasks {
-			if subTask.Completed {
-				completedSubTasks++
-			}
+	completedSubTasks := 0
+	for _, subTask := range task.SubTasks {
+		if subTask.Completed {
+			completedSubTasks++
 		}
+	}
+
+	if len(task.SubTasks) > 0 {
 		progress = (float64(completedSubTasks) / float64(len(task.SubTasks))) * 100
 	} else {
-		progress = 0
+		progress = 100 // ✅ Jika tidak ada subtask, progress harus 100%
 	}
 
 	task.Progress = progress
+
+	// ✅ **Jika semua subtask selesai, task harus Completed**
+	allCompleted := true
+	for _, subTask := range task.SubTasks {
+		if !subTask.Completed {
+			allCompleted = false
+			break
+		}
+	}
+
+	if allCompleted {
+		task.Completed = true
+	}
 
 	// Simpan perubahan ke database
 	database.DB.Save(&task)
